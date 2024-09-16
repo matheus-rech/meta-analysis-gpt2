@@ -1,0 +1,51 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+    - name: Install R dependencies
+      run: Rscript install_dependencies.R
+    - name: Run tests
+      run: Rscript run_tests.R
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+        npx playwright install
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+    - name: Test
+      run: |
+        cd frontend
+        npm test
+
+  deploy:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Deploy to Heroku
+      uses: akhileshns/heroku-deploy@v3.12.12
+      with:
+        heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+        heroku_app_name: "your-app-name"
+        heroku_email: "your-email@example.com"
